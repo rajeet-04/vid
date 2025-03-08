@@ -1,0 +1,22 @@
+<icecast>
+  <limits>
+    <clients>100</clients>
+    <sources>2</sources>
+    <queue-size>524288</queue-size>
+  </limits>
+
+  <authentication>
+    <admin-user>admin</admin-user>
+    <admin-password>admin123</admin-password>
+    <source-password>stream123</source-password>
+  </authentication>
+
+  <listen-socket>
+    <port>8000</port>
+  </listen-socket>
+
+  <mount>
+    <mount-name>/stream.webm</mount-name>
+    <content-type>video/webm</content-type>
+  </mount>
+</icecast>
