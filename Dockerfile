@@ -1,18 +1,19 @@
 FROM debian:latest
 
-# Install Icecast
-RUN apt update && apt install -y icecast2 && rm -rf /var/lib/apt/lists/*
+# Install Icecast (Silent Mode)
+RUN DEBIAN_FRONTEND=noninteractive apt update && apt install -y icecast2 && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
 RUN useradd -m -g icecast icecast
 
-USER icecast
+# Set up writable log directory
+RUN mkdir -p /var/log/icecast && chown -R icecast:icecast /var/log/icecast
 
-# Copy config file
+# Copy Icecast config
 COPY icecast.xml /etc/icecast2/icecast.xml
 
-RUN mkdir -p /usr/local/icecast/logs
+# Switch to non-root user
+USER icecast
+
+# Start Icecast
 CMD ["icecast2", "-c", "/etc/icecast2/icecast.xml"]
-
-COPY mime.types /etc/mime.types
-
