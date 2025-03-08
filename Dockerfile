@@ -11,3 +11,6 @@ USER icecast
 COPY icecast.xml /etc/icecast2/icecast.xml
 
 CMD ["icecast2", "-c", "/etc/icecast2/icecast.xml"]
+
+COPY mime.types /etc/mime.types
+
