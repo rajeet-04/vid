@@ -11,6 +11,10 @@
     <source-password>stream123</source-password>
   </authentication>
 
+  <hostname>your-icecast-app.up.railway.app</hostname>
+  <location>Worldwide</location>
+  <admin>admin@yourdomain.com</admin>
+
   <listen-socket>
     <port>8000</port>
   </listen-socket>
