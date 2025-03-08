@@ -1,71 +1,62 @@
-import { useState, useEffect } from "react";
-import { Button, Input } from "@/components/ui/button";
-import { io } from "socket.io-client";
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+const cors = require("cors");
 
-const socket = io("https://your-server-url.com"); // Replace with your backend URL
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*" }, // Allow frontend connections
+});
 
-export default function SyncStream() {
-    const [gdriveLink, setGdriveLink] = useState("");
-    const [videoUrl, setVideoUrl] = useState(null);
-    const [roomId, setRoomId] = useState(null);
-    const [player, setPlayer] = useState(null);
+app.use(cors());
 
-    useEffect(() => {
-        socket.on("sync", ({ action, time }) => {
-            if (player) {
-                if (action === "play") player.play();
-                else if (action === "pause") player.pause();
-                else if (action === "seek") player.currentTime = time;
-            }
-        });
-    }, [player]);
+let rooms = {}; // Store room data
 
-    const handleGenerateLink = () => {
-        const id = Math.random().toString(36).substring(7);
-        setRoomId(id);
-        setVideoUrl(convertGDriveLink(gdriveLink));
-        socket.emit("create-room", id);
-    };
+// Handle WebSocket connections
+io.on("connection", (socket) => {
+    console.log("User connected:", socket.id);
 
-    const handleVideoEvent = (event) => {
-        if (!roomId) return;
-        const time = player.currentTime;
-        socket.emit("sync", { roomId, action: event, time });
-    };
+    // Creating a room
+    socket.on("create-room", (roomId) => {
+        if (!rooms[roomId]) {
+            rooms[roomId] = { users: [], videoState: { action: "pause", time: 0 } };
+        }
+        socket.join(roomId);
+        console.log(`Room ${roomId} created`);
+    });
 
-    return (
-        <div className="p-4">
-            <h1 className="text-xl font-bold mb-2">Sync Video Streaming</h1>
-            {!roomId ? (
-                <div>
-                    <Input
-                        placeholder="Paste Google Drive Link"
-                        value={gdriveLink}
-                        onChange={(e) => setGdriveLink(e.target.value)}
-                    />
-                    <Button onClick={handleGenerateLink} className="mt-2">
-                        Generate Watch Link
-                    </Button>
-                </div>
-            ) : (
-                <div>
-                    <p>Share this link: {window.location.href}?room={roomId}</p>
-                    <video
-                        src={videoUrl}
-                        controls
-                        ref={(ref) => setPlayer(ref)}
-                        onPlay={() => handleVideoEvent("play")}
-                        onPause={() => handleVideoEvent("pause")}
-                        onSeeked={() => handleVideoEvent("seek")}
-                        className="w-full mt-4"
-                    />
-                </div>
-            )}
-        </div>
-    );
-}
+    // Joining a room
+    socket.on("join-room", (roomId) => {
+        if (rooms[roomId]) {
+            socket.join(roomId);
+            console.log(`User joined room: ${roomId}`);
 
-function convertGDriveLink(link) {
-    const match = link.match(/id=([a-zA-Z0-9_-]+)/);
-    return match ? `https://drive.google.com/uc?id=${match[1]}` : link;
-}
+            // Sync new user with current video state
+            socket.emit("sync", rooms[roomId].videoState);
+        }
+    });
+
+    // Syncing video play/pause/seek
+    socket.on("sync", ({ roomId, action, time }) => {
+        if (rooms[roomId]) {
+            rooms[roomId].videoState = { action, time };
+            socket.to(roomId).emit("sync", { action, time });
+        }
+    });
+
+    socket.on("disconnect", () => {
+        console.log("User disconnected:", socket.id);
+    });
+});
+
+// API route to check server status
+app.get("/", (req, res) => {
+    res.send("Sync Video Server is Running!");
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
