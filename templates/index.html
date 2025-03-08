@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive Video Sync</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <h2>Google Drive Synced Video</h2>
+    {% if video_url %}
+    <video id="video" width="800" controls>
+        <source src="{{ video_url }}" type="video/mp4">
+    </video>
+    {% else %}
+    <p>Waiting for admin to start streaming...</p>
+    {% endif %}
+    <script>
+        const socket = io();
+        const video = document.getElementById("video");
+        if (video) {
+            let ignoreEvents = false;
+            function syncAction(action, time) {
+                if (!ignoreEvents) {
+                    socket.emit("video_control", { action, time });
+                }
+            }
+            video.addEventListener("play", () => syncAction("play", video.currentTime));
+            video.addEventListener("pause", () => syncAction("pause", video.currentTime));
+            video.addEventListener("seeked", () => syncAction("seek", video.currentTime));
+            socket.on("sync_video", (data) => {
+                ignoreEvents = true;
+                if (data.action === "play") video.play();
+                if (data.action === "pause") video.pause();
+                if (data.action === "seek") video.currentTime = data.time;
+                setTimeout(() => { ignoreEvents = false; }, 500);
+            });
+        }
+    </script>
+</body>
+</html>
