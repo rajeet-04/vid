@@ -4,7 +4,8 @@ FROM debian:latest
 RUN apt update && apt install -y icecast2 && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user
-RUN useradd -m icecast
+RUN useradd -m -g icecast icecast
+
 USER icecast
 
 # Copy config file
